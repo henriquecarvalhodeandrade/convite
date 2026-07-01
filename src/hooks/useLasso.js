@@ -3,7 +3,7 @@ import { useRef, useCallback, useEffect } from 'react';
 /* -------------------------------------------------------
    Constants
 ------------------------------------------------------- */
-export const TARGET = { x: 200, y: 392 }; // belt/waist level of envelope body
+export const TARGET = { x: 200, y: 365 }; // middle of the rectangular envelope
 const ANCHOR     = { x: 40,  y: 820 };   // off-screen lower-left (user's hand)
 const HIT_RADIUS = 88;                    // generous — easier to lasso
 
@@ -13,9 +13,12 @@ const HIT_RADIUS = 88;                    // generous — easier to lasso
    – Uses refs for performance: rope position is mutated
      directly in the DOM (avoids React re-renders at 60fps).
 ------------------------------------------------------- */
-export function useLasso({ artRef, ropeRef, loopRef, phaseRef, dispatch }) {
+export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, phaseRef, dispatch }) {
   const draggingRef = useRef(false);
+  const targetPosRef = useRef({ x: 200, y: 540 });
   const loopPosRef  = useRef({ x: 200, y: 540 });
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const rafRef      = useRef(null);
 
   /* Convert screen coords → SVG viewBox coords */
   const svgPoint = useCallback((evt) => {
@@ -40,7 +43,15 @@ export function useLasso({ artRef, ropeRef, loopRef, phaseRef, dispatch }) {
       loopRef.current.setAttribute('cx', String(pos.x));
       loopRef.current.setAttribute('cy', String(pos.y));
     }
-  }, [ropeRef, loopRef]);
+    if (loopBackRef?.current && loopFrontRef?.current && loopRef.current) {
+      const rx = parseFloat(loopRef.current.getAttribute('rx') || 46);
+      const ry = parseFloat(loopRef.current.getAttribute('ry') || 32);
+      // Back arc (sweeps from left to right over the top)
+      loopBackRef.current.setAttribute('d', `M ${pos.x - rx} ${pos.y} A ${rx} ${ry} 0 0 1 ${pos.x + rx} ${pos.y}`);
+      // Front arc (sweeps from left to right under the bottom)
+      loopFrontRef.current.setAttribute('d', `M ${pos.x - rx} ${pos.y} A ${rx} ${ry} 0 0 0 ${pos.x + rx} ${pos.y}`);
+    }
+  }, [ropeRef, loopRef, loopBackRef, loopFrontRef]);
 
   /* Snap loop to target (used on hit and keyboard shortcut) */
   const snapLoopToTarget = useCallback(() => {
@@ -54,30 +65,58 @@ export function useLasso({ artRef, ropeRef, loopRef, phaseRef, dispatch }) {
     drawRope();
   }, [drawRope]);
 
+  const updatePhysics = useCallback(() => {
+    if (phaseRef.current === 'aiming' && draggingRef.current) {
+      const pos = loopPosRef.current;
+      const target = targetPosRef.current;
+      const vel = velocityRef.current;
+
+      const tension = 0.12;
+      const damping = 0.70; // Softer physics
+
+      const dx = target.x - pos.x;
+      const dy = target.y - pos.y;
+
+      vel.x += dx * tension;
+      vel.y += dy * tension;
+
+      vel.x *= damping;
+      vel.y *= damping;
+
+      pos.x += vel.x;
+      pos.y += vel.y;
+
+      drawRope();
+      rafRef.current = requestAnimationFrame(updatePhysics);
+    }
+  }, [drawRope, phaseRef]);
+
   /* ---- Pointer handlers ---- */
 
   const handlePointerDown = useCallback((evt) => {
     if (phaseRef.current !== 'idle') return;
     const p = svgPoint(evt);
-    loopPosRef.current = { x: p.x, y: p.y };
+    targetPosRef.current = { x: p.x, y: p.y };
+    loopPosRef.current = { x: p.x, y: p.y }; // Snap to pointer on start
+    velocityRef.current = { x: 0, y: 0 };
     draggingRef.current = true;
     drawRope();
     dispatch({ type: 'START_AIMING' });
-  }, [svgPoint, drawRope, dispatch, phaseRef]);
+    
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(updatePhysics);
+  }, [svgPoint, drawRope, dispatch, phaseRef, updatePhysics]);
 
   const handlePointerMove = useCallback((evt) => {
     if (phaseRef.current !== 'aiming' || !draggingRef.current) return;
-    const p   = svgPoint(evt);
-    const pos = loopPosRef.current;
-    // lerp for "swinging rope" feel
-    pos.x += (p.x - pos.x) * 0.55;
-    pos.y += (p.y - pos.y) * 0.55;
-    drawRope();
-  }, [svgPoint, drawRope, phaseRef]);
+    const p = svgPoint(evt);
+    targetPosRef.current = { x: p.x, y: p.y }; // Physics engine will chase this target
+  }, [svgPoint, phaseRef]);
 
   const handlePointerUp = useCallback(() => {
     if (phaseRef.current !== 'aiming' || !draggingRef.current) return;
     draggingRef.current = false;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
     const { x, y } = loopPosRef.current;
     const dx   = x - TARGET.x;
@@ -88,14 +127,32 @@ export function useLasso({ artRef, ropeRef, loopRef, phaseRef, dispatch }) {
       snapLoopToTarget();
       dispatch({ type: 'CATCH' });
     } else {
-      // miss: rope falls down
-      loopPosRef.current.y += 220;
-      drawRope();
+      // miss: rope slides and falls down smoothly
+      const fallPhysics = () => {
+         const pos = loopPosRef.current;
+         const vel = velocityRef.current;
+         
+         // Constant gravity acceleration
+         vel.y += 2.5; 
+         // Air friction
+         vel.y *= 0.92;
+         vel.x *= 0.92; // horizontal momentum decays
+
+         pos.x += vel.x;
+         pos.y += vel.y;
+         
+         drawRope();
+         rafRef.current = requestAnimationFrame(fallPhysics);
+      };
+      
+      rafRef.current = requestAnimationFrame(fallPhysics);
+
       setTimeout(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         resetRopePos();
         dispatch({ type: 'MISS' });
         setTimeout(() => dispatch({ type: 'HIDE_MISS' }), 1800);
-      }, 650);
+      }, 800); // fade out after falling for 800ms
     }
   }, [snapLoopToTarget, drawRope, resetRopePos, dispatch, phaseRef]);
 

@@ -9,8 +9,8 @@ const initialState = {
   shake: 'none',        // 'none' | 'big' | 'mid' | 'small'
   browsVisible: false,
   lassoVisible: false,
-  loopRx: 46,
-  loopRy: 32,
+  loopRx: 65,
+  loopRy: 45,
   isAiming: false,
   showMiss: false,
 };
@@ -34,8 +34,8 @@ function reducer(state, action) {
         squeezeCount: 0,
         shake: 'none',
         browsVisible: false,
-        loopRx: 46,
-        loopRy: 32,
+        loopRx: 65,
+        loopRy: 45,
       };
 
     case 'HIDE_MISS':
@@ -49,14 +49,14 @@ function reducer(state, action) {
         lassoVisible: true,
         shake: 'big',
         browsVisible: true,
-        loopRx: 118,   // wide enough to encircle the envelope body (half-width ~104)
-        loopRy: 22,    // thin horizontal belt-like oval — wraps around the waist
+        loopRx: 145,   // wide enough to encircle the new wider envelope body
+        loopRy: 30,    // thin horizontal oval wrapping around
       };
 
     case 'SQUEEZE': {
       const next = state.squeezeCount + 1;
-      if (next === 1) return { ...state, squeezeCount: 1, shake: 'mid',   loopRx: 100, loopRy: 17 };
-      if (next === 2) return { ...state, squeezeCount: 2, shake: 'small', loopRx:  84, loopRy: 13 };
+      if (next === 1) return { ...state, squeezeCount: 1, shake: 'mid',   loopRx: 125, loopRy: 24 };
+      if (next === 2) return { ...state, squeezeCount: 2, shake: 'small', loopRx: 105, loopRy: 18 };
       // next >= 3 → trigger opening
       return { ...state, squeezeCount: 3, phase: 'opening', shake: 'none', browsVisible: false };
     }
