@@ -31,3 +31,6 @@ export const LOOP_SQ1   = { rx: 125, ry: 24  };
 
 /** After 2nd squeeze */
 export const LOOP_SQ2   = { rx: 105, ry: 18  };
+
+/** Number of squeezes required to open the envelope */
+export const SQUEEZE_COUNT_MAX = 3;

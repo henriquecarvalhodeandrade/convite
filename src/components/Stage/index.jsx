@@ -13,7 +13,7 @@ import CaughtScreen  from '../CaughtScreen';
 import RevealScreen  from '../RevealScreen';
 import RestartButton from '../RestartButton';
 
-export default function Stage({ state, dispatch, handleSqueeze }) {
+export default function Stage({ state, dispatch }) {
   /* Sync phase to a ref so stable callbacks can read it */
   const phaseRef = useRef(state.phase);
   useEffect(() => { phaseRef.current = state.phase; }, [state.phase]);
@@ -54,6 +54,10 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
       gsap.to(el, { x: 0, y: 0, rotation: 0, duration: 0.3, ease: 'power2.out' });
       return;
     }
+
+    /* Respect prefers-reduced-motion — skip shake timeline */
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
 
     const cfgs = {
       big:   { x: 7,   rotation: 3.2, dur: 0.42 },
@@ -145,6 +149,9 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
     dispatch({ type: 'RESET' });
   }, [resetRopePos, dispatch]);
 
+  /* handleSqueeze lives here — Stage owns dispatch, no need to thread it from App */
+  const handleSqueeze = useCallback(() => dispatch({ type: 'SQUEEZE' }), [dispatch]);
+
   /* Keyboard accessibility shortcut */
   const handleSqueezeRef = useRef(handleSqueeze);
   useEffect(() => { handleSqueezeRef.current = handleSqueeze; }, [handleSqueeze]);
@@ -162,11 +169,14 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
         dispatch({ type: 'CATCH' });
       } else if (phaseRef.current === 'caught') {
         handleSqueezeRef.current();
+      } else if (phaseRef.current === 'revealed') {
+        // Enter/Space on the reveal screen restarts the game
+        handleReset();
       }
     }
     window.addEventListener('keydown', onKeydown);
     return () => window.removeEventListener('keydown', onKeydown);
-  }, [dispatch, snapLoopToTarget]);
+  }, [dispatch, snapLoopToTarget, handleReset]);
 
   /* ====================================================
      RENDER
@@ -213,23 +223,18 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
           </svg>
 
           {/* =========== HTML OVERLAYS =========== */}
-          <AnimatePresence>
-            {(state.phase === 'idle') && (
+          {/* Single AnimatePresence with mode='wait' ensures screens don't overlap during transitions */}
+          <AnimatePresence mode="wait">
+            {state.phase === 'idle' && (
               <IdleScreen key="idle" showMiss={state.showMiss} />
             )}
-          </AnimatePresence>
-
-          <AnimatePresence>
             {state.phase === 'caught' && (
               <CaughtScreen
-                key="caught"
+                key={state.squeezeCount}
                 squeezeCount={state.squeezeCount}
                 onSqueeze={handleSqueeze}
               />
             )}
-          </AnimatePresence>
-
-          <AnimatePresence>
             {state.phase === 'revealed' && (
               <RevealScreen key="revealed" onReset={handleReset} />
             )}

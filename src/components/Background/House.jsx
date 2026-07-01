@@ -63,6 +63,29 @@ export default function House({ cx, groundY }) {
       <rect x={cx - bw + 10} y={by + 18} width={4} height={groundY - by - 18}
             fill="#0e0b08" stroke={rim} strokeWidth={0.8} />
 
+      {/* ---- CHIMNEY (Behind House) ---- */}
+      <rect
+        x={cx + 28} y={ry - 20}
+        width={16} height={by - ry + 20}
+        fill="#080710"
+        stroke={rim} strokeWidth={rimTh}
+        rx={1}
+      />
+      {/* Chimney cap */}
+      <rect x={cx + 25} y={ry - 22} width={22} height={5}
+            fill="#09080d" stroke={rim} strokeWidth={1} rx={1} />
+
+      {/* Smoke 1 */}
+      <path className="smoke smoke-1"
+            d={`M${cx+36},${ry-23} Q${cx+28},${ry-48} ${cx+38},${ry-66}`}
+            stroke="rgba(200,210,235,0.22)" strokeWidth={4}
+            fill="none" strokeLinecap="round" />
+      {/* Smoke 2 */}
+      <path className="smoke smoke-2"
+            d={`M${cx+38},${ry-22} Q${cx+46},${ry-50} ${cx+34},${ry-70}`}
+            stroke="rgba(200,210,235,0.14)" strokeWidth={3}
+            fill="none" strokeLinecap="round" />
+
       {/* ---- BODY ---- */}
       <rect
         x={cx - bw} y={by}
@@ -91,28 +114,7 @@ export default function House({ cx, groundY }) {
       <line x1={cx + rw} y1={by} x2={cx} y2={ry}
             stroke={rim} strokeWidth={2.2} opacity={0.9} />
 
-      {/* ---- CHIMNEY ---- */}
-      <rect
-        x={cx + 28} y={ry + 12}
-        width={16} height={by - ry + 12}
-        fill="#080710"
-        stroke={rim} strokeWidth={rimTh}
-        rx={1}
-      />
-      {/* Chimney cap */}
-      <rect x={cx + 25} y={ry + 10} width={22} height={5}
-            fill="#09080d" stroke={rim} strokeWidth={1} rx={1} />
 
-      {/* Smoke 1 */}
-      <path className="smoke smoke-1"
-            d={`M${cx+36},${ry+9} Q${cx+28},${ry-16} ${cx+38},${ry-34}`}
-            stroke="rgba(200,210,235,0.22)" strokeWidth={4}
-            fill="none" strokeLinecap="round" />
-      {/* Smoke 2 */}
-      <path className="smoke smoke-2"
-            d={`M${cx+38},${ry+10} Q${cx+46},${ry-18} ${cx+34},${ry-38}`}
-            stroke="rgba(200,210,235,0.14)" strokeWidth={3}
-            fill="none" strokeLinecap="round" />
 
       {/* ---- WINDOWS ---- */}
       {/* Left window — dark (nobody home that side) */}

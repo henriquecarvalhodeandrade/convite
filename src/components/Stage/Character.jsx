@@ -1,4 +1,7 @@
-export default function Character({ envelopeGroupRef, browsRef }) {
+import { memo } from 'react';
+
+// Receives only stable refs — memo prevents re-renders on every game state change
+export default memo(function Character({ envelopeGroupRef, browsRef }) {
   return (
     <g id="envelopeGroup" ref={envelopeGroupRef}>
       {/* Envelope Body */}
@@ -41,4 +44,4 @@ export default function Character({ envelopeGroupRef, browsRef }) {
       </g>
     </g>
   );
-}
+});

@@ -1,4 +1,7 @@
-export default function LassoBack({ lassoBackLayerRef, loopBackRef }) {
+import { memo } from 'react';
+
+// Receives only stable refs — memo prevents re-renders on every game state change
+export default memo(function LassoBack({ lassoBackLayerRef, loopBackRef }) {
   return (
     <g id="lassoBackLayer" ref={lassoBackLayerRef} opacity="0">
       <path
@@ -11,4 +14,4 @@ export default function LassoBack({ lassoBackLayerRef, loopBackRef }) {
       />
     </g>
   );
-}
+});

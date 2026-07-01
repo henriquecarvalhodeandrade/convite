@@ -1,5 +1,5 @@
 import { useReducer } from 'react';
-import { LOOP_IDLE, LOOP_CATCH, LOOP_SQ1, LOOP_SQ2 } from '../constants';
+import { LOOP_IDLE, LOOP_CATCH, LOOP_SQ1, LOOP_SQ2, SQUEEZE_COUNT_MAX } from '../constants';
 
 /* -------------------------------------------------------
    Initial state
@@ -58,8 +58,8 @@ function reducer(state, action) {
       const next = state.squeezeCount + 1;
       if (next === 1) return { ...state, squeezeCount: 1, shake: 'mid',   loopRx: LOOP_SQ1.rx, loopRy: LOOP_SQ1.ry };
       if (next === 2) return { ...state, squeezeCount: 2, shake: 'small', loopRx: LOOP_SQ2.rx, loopRy: LOOP_SQ2.ry };
-      // next >= 3 → trigger opening
-      return { ...state, squeezeCount: 3, phase: 'opening', shake: 'none', browsVisible: false };
+      // next >= SQUEEZE_COUNT_MAX → trigger opening
+      return { ...state, squeezeCount: SQUEEZE_COUNT_MAX, phase: 'opening', shake: 'none', browsVisible: false };
     }
 
     case 'REVEALED':

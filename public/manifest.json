@@ -1,0 +1,19 @@
+{
+  "name": "Convite — Rodeio na Expo Agro",
+  "short_name": "Convite 🤠",
+  "description": "Um convite interativo especial para Juliane — Henrique & Juliano na Expo Agro, 17/07.",
+  "start_url": "/convite/",
+  "scope": "/convite/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1f140d",
+  "theme_color": "#1f140d",
+  "icons": [
+    {
+      "src": "/convite/og-cover.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

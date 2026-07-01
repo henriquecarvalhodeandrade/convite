@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 /* -------------------------------------------------------
    PineTreeSilhouette — v2
    Organic silhouette with curved boughs, layered fills,
@@ -6,7 +8,8 @@
           firelit (left side, warm amber rim),
           moonlit  (right side, cool blue rim)
 ------------------------------------------------------- */
-export default function PineTreeSilhouette({ cx, base, h, firelit = false, moonlit = false }) {
+// Props never change after mount — memo avoids re-running path calculations on game state updates
+export default memo(function PineTreeSilhouette({ cx, base, h, firelit = false, moonlit = false }) {
   const s   = h / 280;        // scale factor
   const top = base - h;
 
@@ -181,4 +184,4 @@ export default function PineTreeSilhouette({ cx, base, h, firelit = false, moonl
       />
     </g>
   );
-}
+});

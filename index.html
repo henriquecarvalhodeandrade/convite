@@ -2,12 +2,58 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <!-- Removed maximum-scale=1 and user-scalable=no: violates WCAG 1.4.4 and is ignored by iOS 10+ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>pra você, Juliane</title>
     <meta name="description" content="Um convite interativo especial para Juliane — Henrique & Juliano na Expo Agro, 17/07." />
+
+    <!-- Favicon: lasso emoji via SVG data URI (no external request needed) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤠</text></svg>" />
+
+    <!-- PWA Manifest — enables "Add to Home Screen" on iOS/Android -->
+    <link rel="manifest" href="/convite/manifest.json" />
+    <!-- iOS standalone mode colour -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#1f140d" />
+
+    <!-- Content Security Policy
+         Restricts resource loading to known safe origins.
+         unsafe-inline required: GSAP & Framer Motion apply inline styles at runtime. -->
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               img-src 'self' data:;
+               connect-src 'self';
+               frame-src 'none';
+               object-src 'none';
+               base-uri 'self';" />
+
+
+    <!-- Open Graph — rich preview when sharing on WhatsApp / social -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="pra você, Juliane 🤠" />
+    <meta property="og:description" content="Henrique & Juliano na Expo Agro — 17/07 às 19h! Abra e descubra o convite." />
+    <meta property="og:url"         content="https://henriquecarvalhodeandrade.github.io/convite/" />
+    <meta property="og:image"       content="https://henriquecarvalhodeandrade.github.io/convite/og-cover.png" />
+    <meta property="og:image:width"  content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card"       content="summary_large_image" />
+
+    <!-- Google Fonts — non-blocking: preload → swap to stylesheet on load -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

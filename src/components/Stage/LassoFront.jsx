@@ -1,6 +1,8 @@
+import { memo } from 'react';
 import { LOOP_REST } from '../../constants';
 
-export default function LassoFront({ lassoLayerRef, ropeRef, loopFrontRef, loopRef }) {
+// Receives only stable refs — memo prevents re-renders on every game state change
+export default memo(function LassoFront({ lassoLayerRef, ropeRef, loopFrontRef, loopRef }) {
   return (
     <g id="lassoLayer" ref={lassoLayerRef} opacity="0">
       <path
@@ -30,4 +32,4 @@ export default function LassoFront({ lassoLayerRef, ropeRef, loopFrontRef, loopR
       />
     </g>
   );
-}
+});

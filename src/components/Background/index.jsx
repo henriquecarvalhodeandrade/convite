@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import { loadSlim } from '@tsparticles/slim';
 
 import PineTreeSilhouette from './PineTreeSilhouette';
 import House from './House';
 import Campfire from './Campfire';
+
+let engineInitPromise = null;
 
 /* -------------------------------------------------------
    tsParticles — twinkling stars
@@ -13,7 +15,7 @@ const starsOptions = {
   background: { color: { value: 'transparent' } },
   fpsLimit: 60,
   particles: {
-    number: { value: 140, density: { enable: true, area: 900 } },
+    number: { value: 280, density: { enable: true, area: 900 } },
     color: { value: ['#ffffff', '#e8f0ff', '#fff8e8', '#c8d8ff', '#ffe8c8'] },
     shape: { type: 'circle' },
     opacity: {
@@ -22,9 +24,12 @@ const starsOptions = {
     },
     size: { value: { min: 0.2, max: 2.8 } },
     move: {
-      enable: true, speed: 0.06, direction: 'none',
-      random: true, straight: false,
-      outModes: { default: 'bounce' },
+      enable: true,
+      speed: 0.15,
+      direction: 'right',
+      random: true,
+      straight: false,
+      outModes: { default: 'out' },
     },
   },
   detectRetina: true,
@@ -33,22 +38,33 @@ const starsOptions = {
 /* -------------------------------------------------------
    Background — main export
 ------------------------------------------------------- */
-export default function Background() {
+// Background's output never changes after tsParticles initialises — memo avoids needless reconciliation
+export default memo(function Background() {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
-    initParticlesEngine(async (engine) => {
-      await loadSlim(engine);
-    }).then(() => setInit(true));
+    let isMounted = true;
+    
+    if (!engineInitPromise) {
+      engineInitPromise = initParticlesEngine(async (engine) => {
+        await loadSlim(engine);
+      });
+    }
+
+    engineInitPromise.then(() => {
+      if (isMounted) setInit(true);
+    });
+
+    return () => { isMounted = false; };
   }, []);
 
   /* ---- Scene layout constants (viewBox 1600×900) ---- */
   const HORIZON   = 632;   // horizon y
-  const TREE_BASE = 644;   // tree base y (slightly below horizon)
+  const TREE_BASE = 675;   // tree base y — well below the lowest ground undulation (~654)
 
-  // Campfire: left-centre area, close enough to illuminate left trees
-  const FIRE_CX = 310;
-  const FIRE_GY = 648;
+  // Campfire: moved down and to the right
+  const FIRE_CX = 550;
+  const FIRE_GY = 735;
 
   // House: right of centre, near the moon
   const HOUSE_CX  = 1020;
@@ -91,8 +107,20 @@ export default function Background() {
         <rect width="1600" height="900" fill="url(#milkyWay)" opacity={0.95} />
       </svg>
 
-      {/* Stars (rendered between sky and foreground) */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
+      {/* Stars — z-index controlled by CSS (#tsparticles { position:fixed; z-index:0 }).
+          The opacity wrapper provides the fade-in transition; zIndex is intentionally
+          omitted here because tsparticles uses position:fixed and exits any parent
+          stacking context regardless. */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+          opacity: init ? 1 : 0,
+          transition: 'opacity 1.2s ease-in',
+        }}
+      >
         {init && <Particles id="tsparticles" options={starsOptions} />}
       </div>
 
@@ -151,13 +179,6 @@ export default function Background() {
             <stop offset="100%" stopColor="#3a1500" stopOpacity="0"    />
           </radialGradient>
 
-          {/* Flame gradient (used by Campfire component) */}
-          <linearGradient id="flameGrad1" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%"   stopColor="#c97b30"           />
-            <stop offset="38%"  stopColor="#e89020"           />
-            <stop offset="72%"  stopColor="#b8512c" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#8f3a1f" stopOpacity="0"   />
-          </linearGradient>
         </defs>
 
         {/* Moon ambient wash — cool blue right side */}
@@ -252,6 +273,9 @@ export default function Background() {
         {/* Closest — tallest, extends out of frame on far left */}
         <PineTreeSilhouette cx={-22} base={TREE_BASE} h={340} firelit />
 
+        {/* ===== HOUSE ===== */}
+        <House cx={HOUSE_CX} groundY={HOUSE_GY} />
+
         {/* ===== PINE TREES — RIGHT GROUP (moon-lit, 4 trees) ===== */}
         {/* Furthest back */}
         <PineTreeSilhouette cx={1160} base={TREE_BASE} h={192} moonlit />
@@ -262,12 +286,9 @@ export default function Background() {
         {/* Closest — tallest, bleeds off right edge */}
         <PineTreeSilhouette cx={1616} base={TREE_BASE} h={335} moonlit />
 
-        {/* ===== HOUSE ===== */}
-        <House cx={HOUSE_CX} groundY={HOUSE_GY} />
-
         {/* ===== CAMPFIRE ===== */}
         <Campfire cx={FIRE_CX} groundY={FIRE_GY} />
       </svg>
     </>
   );
-}
+});

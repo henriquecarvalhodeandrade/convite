@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 /* -------------------------------------------------------
@@ -52,34 +52,38 @@ const CALENDAR_URL =
   '&details=Convite%20especial%20%F0%9F%A4%A0%20para%20o%20show%20na%20Expo%20Agro!' +
   '&location=Estr.%20Mun.%20do%20Jardim%2C%20500%20%E2%80%93%20Jacare%C3%AD%2FSP';
 
-async function handleShare() {
-  const shareData = {
-    title: 'Convite — Rodeio na Expo Agro',
-    text: 'Juliane, bora pro rodeio? Henrique & Juliano na Expo Agro — 17/07 às 19h!',
-    url: window.location.href,
-  };
+/* -------------------------------------------------------
+   Toast — in-theme notification (replaces alert())
+   Auto-dismisses after `duration` ms.
+------------------------------------------------------- */
+function Toast({ message, onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 2500);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
 
-  if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-    } catch {
-      // User cancelled share — no-op
-    }
-  } else {
-    // Fallback: copy link to clipboard
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      alert('Link copiado para a área de transferência!');
-    } catch {
-      // Clipboard unavailable — silent fail
-    }
-  }
+  return (
+    <motion.div
+      className="copy-toast"
+      role="status"
+      aria-live="polite"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
+      ✓ {message}
+    </motion.div>
+  );
 }
 
 /* -------------------------------------------------------
    RevealScreen
 ------------------------------------------------------- */
 export default function RevealScreen({ onReset }) {
+  const shouldReduceMotion = useReducedMotion();
+  const [toastMsg, setToastMsg] = useState(null);
+
   useEffect(() => {
     fireConfetti();
     return () => {
@@ -88,19 +92,49 @@ export default function RevealScreen({ onReset }) {
     };
   }, []);
 
+  async function handleShare() {
+    const shareData = {
+      title: 'Convite — Rodeio na Expo Agro',
+      text: 'Juliane, bora pro rodeio? Henrique & Juliano na Expo Agro — 17/07 às 19h!',
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled share — no-op
+      }
+    } else {
+      // Fallback: copy link to clipboard — show themed toast instead of alert()
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        setToastMsg('link copiado!');
+      } catch {
+        setToastMsg('copie o link da barra de endereço');
+      }
+    }
+  }
+
+  /* Transition helpers that respect prefers-reduced-motion */
+
   return (
     <motion.div
       key="reveal-wrap"
       className="reveal"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.6, ease: 'easeOut' }}
     >
       <motion.div
         className="ticket"
-        initial={{ scale: 0.82, y: 18, opacity: 0 }}
+        initial={{ scale: shouldReduceMotion ? 1 : 0.82, y: shouldReduceMotion ? 0 : 18, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }
+        }
       >
         <div className="ticket-eyebrow">um convite pra você</div>
 
@@ -139,7 +173,11 @@ export default function RevealScreen({ onReset }) {
           className="ticket-actions"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55, duration: 0.4, ease: 'easeOut' }}
+          transition={
+            shouldReduceMotion
+              ? { duration: 0 }
+              : { delay: 0.55, duration: 0.4, ease: 'easeOut' }
+          }
         >
           <a
             href={CALENDAR_URL}
@@ -161,6 +199,17 @@ export default function RevealScreen({ onReset }) {
         </motion.div>
       </motion.div>
 
+      {/* Toast notification — themed, replaces alert() */}
+      <AnimatePresence>
+        {toastMsg && (
+          <Toast
+            key="toast"
+            message={toastMsg}
+            onDismiss={() => setToastMsg(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Play again */}
       <motion.button
         type="button"
@@ -168,7 +217,9 @@ export default function RevealScreen({ onReset }) {
         onClick={onReset}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.4 }}
+        transition={
+          shouldReduceMotion ? { duration: 0 } : { delay: 0.9, duration: 0.4 }
+        }
         aria-label="Jogar novamente"
       >
         jogar de novo

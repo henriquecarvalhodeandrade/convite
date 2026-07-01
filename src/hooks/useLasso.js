@@ -60,30 +60,35 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     drawRope();
   }, [drawRope]);
 
+  /* Physics loop — self-referential via a named inner function to avoid the
+     ESLint react-hooks/refs error that occurs when writing to ref.current outside effects. */
   const updatePhysics = useCallback(() => {
-    if (phaseRef.current === 'aiming' && draggingRef.current) {
-      const pos    = loopPosRef.current;
-      const target = targetPosRef.current;
-      const vel    = velocityRef.current;
+    function loop() {
+      if (phaseRef.current === 'aiming' && draggingRef.current) {
+        const pos    = loopPosRef.current;
+        const target = targetPosRef.current;
+        const vel    = velocityRef.current;
 
-      const tension = 0.12;
-      const damping = 0.70; // Softer physics
+        const tension = 0.12;
+        const damping = 0.70; // Softer physics
 
-      const dx = target.x - pos.x;
-      const dy = target.y - pos.y;
+        const dx = target.x - pos.x;
+        const dy = target.y - pos.y;
 
-      vel.x += dx * tension;
-      vel.y += dy * tension;
+        vel.x += dx * tension;
+        vel.y += dy * tension;
 
-      vel.x *= damping;
-      vel.y *= damping;
+        vel.x *= damping;
+        vel.y *= damping;
 
-      pos.x += vel.x;
-      pos.y += vel.y;
+        pos.x += vel.x;
+        pos.y += vel.y;
 
-      drawRope();
-      rafRef.current = requestAnimationFrame(updatePhysics);
+        drawRope();
+        rafRef.current = requestAnimationFrame(loop);
+      }
     }
+    loop();
   }, [drawRope, phaseRef]);
 
   /* ---- Pointer handlers ---- */
@@ -99,7 +104,7 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     dispatch({ type: 'START_AIMING' });
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(updatePhysics);
+    rafRef.current = requestAnimationFrame(() => updatePhysics());
   }, [svgPoint, drawRope, dispatch, phaseRef, updatePhysics]);
 
   const handlePointerMove = useCallback((evt) => {
@@ -124,7 +129,9 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
       dispatch({ type: 'CATCH' });
     } else {
       // miss: rope slides and falls down smoothly
+      const fallState = { cancelled: false };
       const fallPhysics = () => {
+        if (fallState.cancelled) return;
         const pos = loopPosRef.current;
         const vel = velocityRef.current;
 
@@ -144,6 +151,7 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
       rafRef.current = requestAnimationFrame(fallPhysics);
 
       const t1 = setTimeout(() => {
+        fallState.cancelled = true;
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         resetRopePos();
         dispatch({ type: 'MISS' });
@@ -166,11 +174,14 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     };
   }, [handlePointerMove, handlePointerUp]);
 
-  /* Cleanup on unmount: cancel any pending animation frames and timeouts */
+  /* Cleanup on unmount: cancel any pending animation frames and timeouts.
+     Snapshot timeoutsRef.current into a local variable to avoid the
+     react-hooks/exhaustive-deps warning about ref values changing in cleanup. */
   useEffect(() => {
+    const timeouts = timeoutsRef.current;
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      timeoutsRef.current.forEach(clearTimeout);
+      timeouts.forEach(clearTimeout);
     };
   }, []);
 

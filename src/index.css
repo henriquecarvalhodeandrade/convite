@@ -342,6 +342,28 @@ svg#art {
 .reveal-restart:hover { color: rgba(255,255,255,.6); }
 
 /* ============================
+   COPY TOAST (replaces alert)
+   ============================ */
+.copy-toast {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ember-deep);
+  color: var(--parchment);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  padding: 9px 20px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+
+
+/* ============================
    RESTART (dev only)
    ============================ */
 .restart {
@@ -358,6 +380,8 @@ svg#art {
 
 /* ============================
    TSPARTICLES
+   z-index:0 is the effective value — tsparticles uses position:fixed so it
+   exits any parent stacking context. Layering: sky(-2) → stars(0) → scene-svg(0,after) → stage(1)
    ============================ */
 #tsparticles {
   position: fixed;
