@@ -15,7 +15,7 @@ export default function IdleScreen({ showMiss }) {
 
       {/* Aim hint (always visible in idle) */}
       <div className="label label-hint" style={{ bottom: '6%' }}>
-        arraste pra mirar &amp; solte pra laçar 🤠
+        arraste pra mirar &amp; solte pra laçar
       </div>
 
       {/* Miss message */}

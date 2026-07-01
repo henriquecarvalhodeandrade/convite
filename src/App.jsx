@@ -232,7 +232,7 @@ export default function App() {
               </g>
 
               {/* Cowboy hat — REDESIGNED as proper sertanejo/country hat */}
-              <g id="hatGroup">
+              <g id="hatGroup" transform="translate(0, 22)">
                 {/* Wide brim — THE key feature of a sertanejo hat */}
                 <path
                   d="M 76,172

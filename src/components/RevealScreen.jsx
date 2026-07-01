@@ -91,7 +91,7 @@ export default function RevealScreen() {
 
         <div className="ticket-footer">
           os ingressos já estão garantidos.<br />
-          só falta combinar a roupa de capa e chapéu 🤠
+          só falta combinar a roupa de capa e chapéu
         </div>
       </motion.div>
     </motion.div>

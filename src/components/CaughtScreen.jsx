@@ -37,7 +37,7 @@ export default function CaughtScreen({ squeezeCount, onSqueeze }) {
         whileTap={{ scale: 0.92, y: 3 }}
         transition={{ type: 'spring', stiffness: 600, damping: 20 }}
       >
-        apertar o laço 🪢
+        apertar o laço
       </motion.button>
 
       <div className="knots">
