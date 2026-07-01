@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 
 import { useLasso } from '../../hooks/useLasso';
+import { LOOP_REST } from '../../constants';
 import Character from './Character';
 import LassoBack from './LassoBack';
 import LassoFront from './LassoFront';
@@ -127,7 +128,7 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
      ACTIONS
   ==================================================== */
 
-  /* Full reset (dev) */
+  /* Full reset */
   const handleReset = useCallback(() => {
     gsap.killTweensOf([
       envelopeGroupRef.current,
@@ -139,7 +140,7 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
     gsap.set(envelopeGroupRef.current, { clearProps: 'all' });
     gsap.set([lassoLayerRef.current, lassoBackLayerRef.current], { opacity: 0 });
     gsap.set(browsRef.current,         { opacity: 0 });
-    gsap.set(loopRef.current,          { attr: { rx: 46, ry: 32 } });
+    gsap.set(loopRef.current,          { attr: { rx: LOOP_REST.rx, ry: LOOP_REST.ry } });
     resetRopePos();
     dispatch({ type: 'RESET' });
   }, [resetRopePos, dispatch]);
@@ -176,6 +177,8 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
         <div
           id="stage"
           className={`stage${state.isAiming ? ' aiming' : ''}`}
+          role="application"
+          aria-label="Jogo de laço — arraste para laçar o envelope e revelar o convite"
           tabIndex={0}
           onPointerDown={handlePointerDown}
         >
@@ -198,14 +201,14 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
 
             {/* Subcomponents rendering layers */}
             <LassoBack lassoBackLayerRef={lassoBackLayerRef} loopBackRef={loopBackRef} />
-            
+
             <Character envelopeGroupRef={envelopeGroupRef} browsRef={browsRef} />
-            
-            <LassoFront 
-              lassoLayerRef={lassoLayerRef} 
-              ropeRef={ropeRef} 
-              loopFrontRef={loopFrontRef} 
-              loopRef={loopRef} 
+
+            <LassoFront
+              lassoLayerRef={lassoLayerRef}
+              ropeRef={ropeRef}
+              loopFrontRef={loopFrontRef}
+              loopRef={loopRef}
             />
           </svg>
 
@@ -228,14 +231,14 @@ export default function Stage({ state, dispatch, handleSqueeze }) {
 
           <AnimatePresence>
             {state.phase === 'revealed' && (
-              <RevealScreen key="revealed" />
+              <RevealScreen key="revealed" onReset={handleReset} />
             )}
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Dev-only restart */}
-      <RestartButton onReset={handleReset} />
+      {/* Restart button — dev only */}
+      {import.meta.env.DEV && <RestartButton onReset={handleReset} />}
     </>
   );
 }

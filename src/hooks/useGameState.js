@@ -1,4 +1,5 @@
 import { useReducer } from 'react';
+import { LOOP_IDLE, LOOP_CATCH, LOOP_SQ1, LOOP_SQ2 } from '../constants';
 
 /* -------------------------------------------------------
    Initial state
@@ -9,8 +10,8 @@ const initialState = {
   shake: 'none',        // 'none' | 'big' | 'mid' | 'small'
   browsVisible: false,
   lassoVisible: false,
-  loopRx: 65,
-  loopRy: 45,
+  loopRx: LOOP_IDLE.rx,
+  loopRy: LOOP_IDLE.ry,
   isAiming: false,
   showMiss: false,
 };
@@ -34,8 +35,8 @@ function reducer(state, action) {
         squeezeCount: 0,
         shake: 'none',
         browsVisible: false,
-        loopRx: 65,
-        loopRy: 45,
+        loopRx: LOOP_IDLE.rx,
+        loopRy: LOOP_IDLE.ry,
       };
 
     case 'HIDE_MISS':
@@ -49,14 +50,14 @@ function reducer(state, action) {
         lassoVisible: true,
         shake: 'big',
         browsVisible: true,
-        loopRx: 145,   // wide enough to encircle the new wider envelope body
-        loopRy: 30,    // thin horizontal oval wrapping around
+        loopRx: LOOP_CATCH.rx,  // wide enough to encircle the new wider envelope body
+        loopRy: LOOP_CATCH.ry,  // thin horizontal oval wrapping around
       };
 
     case 'SQUEEZE': {
       const next = state.squeezeCount + 1;
-      if (next === 1) return { ...state, squeezeCount: 1, shake: 'mid',   loopRx: 125, loopRy: 24 };
-      if (next === 2) return { ...state, squeezeCount: 2, shake: 'small', loopRx: 105, loopRy: 18 };
+      if (next === 1) return { ...state, squeezeCount: 1, shake: 'mid',   loopRx: LOOP_SQ1.rx, loopRy: LOOP_SQ1.ry };
+      if (next === 2) return { ...state, squeezeCount: 2, shake: 'small', loopRx: LOOP_SQ2.rx, loopRy: LOOP_SQ2.ry };
       // next >= 3 → trigger opening
       return { ...state, squeezeCount: 3, phase: 'opening', shake: 'none', browsVisible: false };
     }

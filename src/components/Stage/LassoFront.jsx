@@ -1,3 +1,5 @@
+import { LOOP_REST } from '../../constants';
+
 export default function LassoFront({ lassoLayerRef, ropeRef, loopFrontRef, loopRef }) {
   return (
     <g id="lassoLayer" ref={lassoLayerRef} opacity="0">
@@ -23,7 +25,7 @@ export default function LassoFront({ lassoLayerRef, ropeRef, loopFrontRef, loopR
         id="loop"
         ref={loopRef}
         cx="200" cy="510"
-        rx="46" ry="32"
+        rx={LOOP_REST.rx} ry={LOOP_REST.ry}
         display="none"
       />
     </g>

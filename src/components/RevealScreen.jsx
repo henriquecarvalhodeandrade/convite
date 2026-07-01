@@ -41,11 +41,51 @@ function fireConfetti() {
 }
 
 /* -------------------------------------------------------
+   Google Calendar deep-link
+   Event: Rodeio — Henrique & Juliano na Expo Agro
+   Date : 17/07/2026 19h–00h (BRT = UTC-3)
+------------------------------------------------------- */
+const CALENDAR_URL =
+  'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+  '&text=Rodeio%20%E2%80%93%20Henrique%20%26%20Juliano%20na%20Expo%20Agro' +
+  '&dates=20260717T220000Z%2F20260718T030000Z' +
+  '&details=Convite%20especial%20%F0%9F%A4%A0%20para%20o%20show%20na%20Expo%20Agro!' +
+  '&location=Estr.%20Mun.%20do%20Jardim%2C%20500%20%E2%80%93%20Jacare%C3%AD%2FSP';
+
+async function handleShare() {
+  const shareData = {
+    title: 'Convite — Rodeio na Expo Agro',
+    text: 'Juliane, bora pro rodeio? Henrique & Juliano na Expo Agro — 17/07 às 19h!',
+    url: window.location.href,
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch {
+      // User cancelled share — no-op
+    }
+  } else {
+    // Fallback: copy link to clipboard
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      alert('Link copiado para a área de transferência!');
+    } catch {
+      // Clipboard unavailable — silent fail
+    }
+  }
+}
+
+/* -------------------------------------------------------
    RevealScreen
 ------------------------------------------------------- */
-export default function RevealScreen() {
+export default function RevealScreen({ onReset }) {
   useEffect(() => {
     fireConfetti();
+    return () => {
+      // Cancel any still-flying confetti particles when unmounting
+      confetti.reset();
+    };
   }, []);
 
   return (
@@ -93,7 +133,46 @@ export default function RevealScreen() {
           os ingressos já estão garantidos.<br />
           só falta combinar a roupa de capa e chapéu
         </div>
+
+        {/* Action buttons */}
+        <motion.div
+          className="ticket-actions"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.4, ease: 'easeOut' }}
+        >
+          <a
+            href={CALENDAR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ticket-btn ticket-btn--calendar"
+            aria-label="Adicionar evento ao Google Agenda"
+          >
+            📅 adicionar ao calendário
+          </a>
+          <button
+            type="button"
+            className="ticket-btn ticket-btn--share"
+            onClick={handleShare}
+            aria-label="Compartilhar este convite"
+          >
+            🔗 compartilhar
+          </button>
+        </motion.div>
       </motion.div>
+
+      {/* Play again */}
+      <motion.button
+        type="button"
+        className="reveal-restart"
+        onClick={onReset}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.9, duration: 0.4 }}
+        aria-label="Jogar novamente"
+      >
+        jogar de novo
+      </motion.button>
     </motion.div>
   );
 }

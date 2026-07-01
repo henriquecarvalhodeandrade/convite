@@ -1,11 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
-
-/* -------------------------------------------------------
-   Constants
-------------------------------------------------------- */
-export const TARGET = { x: 200, y: 365 }; // middle of the rectangular envelope
-const ANCHOR     = { x: 40,  y: 820 };   // off-screen lower-left (user's hand)
-const HIT_RADIUS = 88;                    // generous — easier to lasso
+import { LASSO_TARGET, LASSO_ANCHOR, HIT_RADIUS, LOOP_INITIAL_POS } from '../constants';
 
 /* -------------------------------------------------------
    useLasso
@@ -14,11 +8,12 @@ const HIT_RADIUS = 88;                    // generous — easier to lasso
      directly in the DOM (avoids React re-renders at 60fps).
 ------------------------------------------------------- */
 export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, phaseRef, dispatch }) {
-  const draggingRef = useRef(false);
-  const targetPosRef = useRef({ x: 200, y: 540 });
-  const loopPosRef  = useRef({ x: 200, y: 540 });
-  const velocityRef = useRef({ x: 0, y: 0 });
-  const rafRef      = useRef(null);
+  const draggingRef   = useRef(false);
+  const targetPosRef  = useRef({ ...LOOP_INITIAL_POS });
+  const loopPosRef    = useRef({ ...LOOP_INITIAL_POS });
+  const velocityRef   = useRef({ x: 0, y: 0 });
+  const rafRef        = useRef(null);
+  const timeoutsRef   = useRef([]); // tracks pending timeouts for cleanup
 
   /* Convert screen coords → SVG viewBox coords */
   const svgPoint = useCallback((evt) => {
@@ -33,11 +28,11 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
   /* Redraw the quadratic-bezier rope and reposition the loop */
   const drawRope = useCallback(() => {
     const pos  = loopPosRef.current;
-    const midX = (ANCHOR.x + pos.x) / 2 + (pos.x - ANCHOR.x) * 0.15;
-    const midY = (ANCHOR.y + pos.y) / 2;
+    const midX = (LASSO_ANCHOR.x + pos.x) / 2 + (pos.x - LASSO_ANCHOR.x) * 0.15;
+    const midY = (LASSO_ANCHOR.y + pos.y) / 2;
     if (ropeRef.current) {
       ropeRef.current.setAttribute('d',
-        `M${ANCHOR.x},${ANCHOR.y} Q${midX},${midY} ${pos.x},${pos.y}`);
+        `M${LASSO_ANCHOR.x},${LASSO_ANCHOR.y} Q${midX},${midY} ${pos.x},${pos.y}`);
     }
     if (loopRef.current) {
       loopRef.current.setAttribute('cx', String(pos.x));
@@ -55,21 +50,21 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
 
   /* Snap loop to target (used on hit and keyboard shortcut) */
   const snapLoopToTarget = useCallback(() => {
-    loopPosRef.current = { x: TARGET.x, y: TARGET.y };
+    loopPosRef.current = { ...LASSO_TARGET };
     drawRope();
   }, [drawRope]);
 
   /* Return loop to resting position */
   const resetRopePos = useCallback(() => {
-    loopPosRef.current = { x: 200, y: 540 };
+    loopPosRef.current = { ...LOOP_INITIAL_POS };
     drawRope();
   }, [drawRope]);
 
   const updatePhysics = useCallback(() => {
     if (phaseRef.current === 'aiming' && draggingRef.current) {
-      const pos = loopPosRef.current;
+      const pos    = loopPosRef.current;
       const target = targetPosRef.current;
-      const vel = velocityRef.current;
+      const vel    = velocityRef.current;
 
       const tension = 0.12;
       const damping = 0.70; // Softer physics
@@ -97,18 +92,19 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     if (phaseRef.current !== 'idle') return;
     const p = svgPoint(evt);
     targetPosRef.current = { x: p.x, y: p.y };
-    loopPosRef.current = { x: p.x, y: p.y }; // Snap to pointer on start
-    velocityRef.current = { x: 0, y: 0 };
-    draggingRef.current = true;
+    loopPosRef.current   = { x: p.x, y: p.y }; // Snap to pointer on start
+    velocityRef.current  = { x: 0, y: 0 };
+    draggingRef.current  = true;
     drawRope();
     dispatch({ type: 'START_AIMING' });
-    
+
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(updatePhysics);
   }, [svgPoint, drawRope, dispatch, phaseRef, updatePhysics]);
 
   const handlePointerMove = useCallback((evt) => {
     if (phaseRef.current !== 'aiming' || !draggingRef.current) return;
+    evt.preventDefault(); // prevent iOS Safari scroll during drag
     const p = svgPoint(evt);
     targetPosRef.current = { x: p.x, y: p.y }; // Physics engine will chase this target
   }, [svgPoint, phaseRef]);
@@ -119,8 +115,8 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
     const { x, y } = loopPosRef.current;
-    const dx   = x - TARGET.x;
-    const dy   = y - TARGET.y;
+    const dx   = x - LASSO_TARGET.x;
+    const dy   = y - LASSO_TARGET.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist <= HIT_RADIUS) {
@@ -129,42 +125,54 @@ export function useLasso({ artRef, ropeRef, loopRef, loopBackRef, loopFrontRef, 
     } else {
       // miss: rope slides and falls down smoothly
       const fallPhysics = () => {
-         const pos = loopPosRef.current;
-         const vel = velocityRef.current;
-         
-         // Constant gravity acceleration
-         vel.y += 2.5; 
-         // Air friction
-         vel.y *= 0.92;
-         vel.x *= 0.92; // horizontal momentum decays
+        const pos = loopPosRef.current;
+        const vel = velocityRef.current;
 
-         pos.x += vel.x;
-         pos.y += vel.y;
-         
-         drawRope();
-         rafRef.current = requestAnimationFrame(fallPhysics);
+        // Constant gravity acceleration
+        vel.y += 2.5;
+        // Air friction
+        vel.y *= 0.92;
+        vel.x *= 0.92; // horizontal momentum decays
+
+        pos.x += vel.x;
+        pos.y += vel.y;
+
+        drawRope();
+        rafRef.current = requestAnimationFrame(fallPhysics);
       };
-      
+
       rafRef.current = requestAnimationFrame(fallPhysics);
 
-      setTimeout(() => {
+      const t1 = setTimeout(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         resetRopePos();
         dispatch({ type: 'MISS' });
-        setTimeout(() => dispatch({ type: 'HIDE_MISS' }), 1800);
+        const t2 = setTimeout(() => dispatch({ type: 'HIDE_MISS' }), 1800);
+        timeoutsRef.current.push(t2);
       }, 800); // fade out after falling for 800ms
+      timeoutsRef.current.push(t1);
     }
   }, [snapLoopToTarget, drawRope, resetRopePos, dispatch, phaseRef]);
 
-  /* Attach window-level events so drag works outside the stage area */
+  /* Attach window-level events so drag works outside the stage area.
+     pointermove uses { passive: false } so preventDefault() suppresses
+     iOS Safari page scroll during the lasso drag gesture. */
   useEffect(() => {
-    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
     window.addEventListener('pointerup',   handlePointerUp);
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup',   handlePointerUp);
     };
   }, [handlePointerMove, handlePointerUp]);
+
+  /* Cleanup on unmount: cancel any pending animation frames and timeouts */
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   return { handlePointerDown, snapLoopToTarget, resetRopePos, drawRope };
 }
